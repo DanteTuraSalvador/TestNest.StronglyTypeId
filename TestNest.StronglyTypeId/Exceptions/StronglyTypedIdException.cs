@@ -1,54 +1,106 @@
-﻿namespace TestNest.StronglyTypeId.Exceptions;
+﻿namespace TestNest.Domain.Exceptions;
 
 public class StronglyTypedIdException : Exception
 {
-    public enum ErrorCode
+    // Base constructor for all strongly typed ID exceptions
+    protected StronglyTypedIdException(string message) : base(message) { }
+
+    // Different failure reasons for ID creation
+    public enum CreationFailureReason
     {
-        NullArgument,
-        NullInstance,
-        InvalidGuid,
-        JsonDeserialization,
-        JsonSerialization,
-        ModelBindingNullContext,
-        ModelBindingMissingValue,
-        ModelBindingInvalidFormat,
-        ModelBindingCreationFailure,
-        InvalidComparison,
-        NullId
+        NullInstance,  // Couldn't create an instance (Activator.CreateInstance returned null)
+        InvalidGuid    // Provided GUID is invalid
     }
 
-    private static readonly Dictionary<ErrorCode, string> ErrorMessages = new()
+    // Argument-related exceptions (e.g., missing or null values)
+    public class Argument : StronglyTypedIdException
     {
-        { ErrorCode.NullArgument, "The argument cannot be null in a strongly typed ID operation." },
-        { ErrorCode.NullInstance, "Failed to create an instance. Activator.CreateInstance returned null." },
-        { ErrorCode.InvalidGuid, "The provided value is not a valid GUID." },
-        { ErrorCode.JsonDeserialization, "Couldn't deserialize from JSON. Invalid format." },
-        { ErrorCode.JsonSerialization, "Failed to serialize to JSON." },
-        { ErrorCode.ModelBindingNullContext, "The binding context cannot be null in StronglyTypedIdModelBinder." },
-        { ErrorCode.ModelBindingMissingValue, "No value was provided for the strongly typed ID in the request." },
-        { ErrorCode.ModelBindingInvalidFormat, "The provided value for the strongly typed ID is not a valid GUID." },
-        { ErrorCode.ModelBindingCreationFailure, "Failed to create an instance of the strongly typed ID from the provided GUID." },
-        { ErrorCode.InvalidComparison, "Invalid comparison between incompatible types." },
-        { ErrorCode.NullId, "ID cannot be null or empty." }
-    };
+        // Base constructor for argument errors
+        protected Argument(string message) : base(message) { }
 
-    public ErrorCode Code { get; }
-
-    public StronglyTypedIdException(ErrorCode code) : base(ErrorMessages[code])
-    {
-        Code = code;
+        // Thrown when a required argument is null
+        public class Null : Argument
+        {
+            public Null(string paramName)
+                : base($"The argument '{paramName}' cannot be null in a strongly typed ID operation.") { }
+        }
     }
 
-    // Static helper methods
-    public static StronglyTypedIdException NullArgument() => new(ErrorCode.NullArgument);
-    public static StronglyTypedIdException NullInstance() => new(ErrorCode.NullInstance);
-    public static StronglyTypedIdException InvalidGuid() => new(ErrorCode.InvalidGuid);
-    public static StronglyTypedIdException JsonDeserialization() => new(ErrorCode.JsonDeserialization);
-    public static StronglyTypedIdException JsonSerialization() => new(ErrorCode.JsonSerialization);
-    public static StronglyTypedIdException ModelBindingNullContext() => new(ErrorCode.ModelBindingNullContext);
-    public static StronglyTypedIdException ModelBindingMissingValue() => new(ErrorCode.ModelBindingMissingValue);
-    public static StronglyTypedIdException ModelBindingInvalidFormat() => new(ErrorCode.ModelBindingInvalidFormat);
-    public static StronglyTypedIdException ModelBindingCreationFailure() => new(ErrorCode.ModelBindingCreationFailure);
-    public static StronglyTypedIdException InvalidComparison() => new(ErrorCode.InvalidComparison);
-    public static StronglyTypedIdException NullId() => new(ErrorCode.NullId);
+    // Exceptions related to ID creation
+    public class Creation : StronglyTypedIdException
+    {
+        public Creation(Type idType, CreationFailureReason reason)
+            : base(GetErrorMessage(idType, reason)) { }
+
+        // Generates a friendly error message based on the failure reason
+        private static string GetErrorMessage(Type idType, CreationFailureReason reason) => reason switch
+        {
+            CreationFailureReason.NullInstance => $"Failed to create an instance of {idType.Name}. Activator.CreateInstance returned null.",
+            CreationFailureReason.InvalidGuid => $"Failed to create an instance of {idType.Name} from the provided GUID.",
+            _ => $"Unknown error while creating an instance of {idType.Name}."
+        };
+    }
+
+    // Exceptions related to invalid ID format
+    public class Format : StronglyTypedIdException
+    {
+        public Format(string input)
+            : base($"Invalid format for strongly typed ID: {input}") { }
+    }
+
+    // Handles JSON serialization and deserialization errors for strongly typed IDs
+    public class Json : StronglyTypedIdException
+    {
+        // Base constructor for JSON-related errors
+        protected Json(string message) : base(message) { }
+
+        // Error when trying to deserialize a strongly typed ID from JSON
+        public class Deserialization : Json
+        {
+            public Deserialization(Type idType, string? input)
+                : base($"Couldn't deserialize {idType.Name} from JSON. Invalid format: '{input ?? "null"}'.") { }
+        }
+
+        // Error when trying to serialize a strongly typed ID to JSON
+        public class Serialization : Json
+        {
+            public Serialization(Type idType)
+                : base($"Failed to serialize {idType.Name} to JSON.") { }
+        }
+    }
+
+    // Handles errors related to model binding for strongly typed IDs
+    public class ModelBinder : StronglyTypedIdException
+    {
+        // Base constructor for model binding errors
+        protected ModelBinder(string message) : base(message) { }
+
+        // Error when the binding context is null (this shouldn't happen)
+        public class NullBindingContext : ModelBinder
+        {
+            public NullBindingContext()
+                : base("The binding context cannot be null in StronglyTypedIdModelBinder.") { }
+        }
+
+        // Error when no value is provided for the strongly typed ID in an API request
+        public class MissingValue : ModelBinder
+        {
+            public MissingValue(string modelName)
+                : base($"No value was provided for the strongly typed ID '{modelName}' in the request.") { }
+        }
+
+        // Error when the provided value isn't a valid GUID
+        public class InvalidFormat : ModelBinder
+        {
+            public InvalidFormat(string modelName, string? value)
+                : base($"The provided value '{value}' for '{modelName}' is not a valid GUID.") { }
+        }
+
+        // Error when the system fails to create an instance of a strongly typed ID from a GUID
+        public class ModelCreationFailure : ModelBinder
+        {
+            public ModelCreationFailure(Type idType)
+                : base($"Failed to create an instance of '{idType.Name}' from the provided GUID.") { }
+        }
+    }
 }
