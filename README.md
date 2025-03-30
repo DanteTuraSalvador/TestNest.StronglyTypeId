@@ -15,7 +15,7 @@ A .NET library for creating type-safe identifiers that prevent primitive obsessi
 
 ## 🚀 Getting Started
 
-### Installation
+Basic Usage
+Define your ID type:
 
-```bash
-dotnet add package TestNest.StronglyTypeId
+csharp
