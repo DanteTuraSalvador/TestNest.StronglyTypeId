@@ -150,9 +150,57 @@ namespace TestNest.StronglyTypeId.StronglyTypeIds
 ```
 ## 📌 Usage Examples
 
-## ✅ Creating a new ID
+### ✅ Creating a new ID
 
 ```csharp
 var guestId = GuestId.New();
 Console.WriteLine(guestId);  // e.g., "b123fbb0-92a6-4f41-85b5-61a4d7306ef7"
+
 ```
+
+### ✅ Parsing from a string
+
+```csharp
+var parsedId = GuestId.Parse("b123fbb0-92a6-4f41-85b5-61a4d7306ef7");
+Console.WriteLine(parsedId);
+
+```
+
+### ✅ Checking equality
+
+```csharp
+var id1 = GuestId.New();
+var id2 = GuestId.Parse(id1.ToString());
+
+Console.WriteLine(id1 == id2);  // True
+
+```
+
+### ✅ Getting an empty ID
+
+```csharp
+var emptyId = GuestId.Empty();
+Console.WriteLine(emptyId);  // 00000000-0000-0000-0000-000000000000
+
+```
+
+## 🎯 Why Use StronglyTypedId?
+
+Using Guid directly in entities can lead to accidental mix-ups between different ID types. With StronglyTypedId<T>, each entity gets its own unique ID type, preventing errors like:
+
+```csharp
+public void AssignBookingToGuest(Guid bookingId, Guid guestId) 
+{
+    // Oops! Parameters are interchangeable, which is dangerous!
+}
+
+```
+
+## 📌 Conclusion  
+
+`StronglyTypedId<T>` enhances type safety, improves readability, and prevents common ID-related bugs.  
+Implementing it in your domain model makes your code cleaner, safer, and more maintainable.
+
+## 🌟 License
+
+This project is open-source and free to use.
