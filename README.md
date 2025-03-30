@@ -244,6 +244,26 @@ Pull requests are welcome! Please:
 This project is open-source and free to use.
 
 
-## 📁 Sample Project Structure
-/StronglyTypedId │ README.md │ StronglyTypedId.sln │ └───/src │ │ TestNest.StronglyTypeId.csproj │ │ StronglyTypedId.cs │ │ GuestId.cs │ └───/tests │ GuestIdTests.cs │ Program.cs (Test console)
+## 📁 Project Structure
+
+StronglyTypedId/
+├── src/
+│ ├── TestNest.StronglyTypeId/
+│ │ ├── StronglyTypedId.cs # Core abstract base class
+│ │ ├── GuestId.cs # Sample implementation
+│ │ ├── Exceptions.cs # Custom exceptions
+│ │ └── TestNest.StronglyTypeId.csproj
+│ │
+│ └── TestConsole/ # Optional test console
+│ └── Program.cs
+│
+├── tests/
+│ ├── TestNest.StronglyTypeId.Tests/
+│ │ ├── GuestIdTests.cs # Unit tests
+│ │ └── TestNest.StronglyTypeId.Tests.csproj
+│ │
+│ └── TestConsole/ # Integration tests (optional)
+│
+├── README.md
+└── LICENSE
 
