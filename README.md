@@ -85,4 +85,5 @@ namespace TestNest.StronglyTypeId.Common
         public override string ToString() => Value.ToString();
     }
 }
-
+```
+### 🔹 StronglyTypedId Base Class
