@@ -185,6 +185,19 @@ Console.WriteLine(emptyId);  // 00000000-0000-0000-0000-000000000000
 
 ```
 
+## 🎯 Why Use StronglyTypedId?
+
+Using Guid directly in entities can lead to accidental mix-ups between different ID types. With StronglyTypedId<T>, each entity gets its own unique ID type, preventing errors like:
+
+```csharp
+public void AssignBookingToGuest(Guid bookingId, Guid guestId) 
+{
+    // Oops! Parameters are interchangeable, which is dangerous!
+}
+
+```
+
+
 ### 🔹 Core Methods
 
 | Method | Description |
@@ -228,25 +241,9 @@ Pull requests are welcome! Please:
 
 ## 📜 License
 
-This project is licensed under the **MIT License**.
-
-## 🎯 Why Use StronglyTypedId?
-
-Using Guid directly in entities can lead to accidental mix-ups between different ID types. With StronglyTypedId<T>, each entity gets its own unique ID type, preventing errors like:
-
-```csharp
-public void AssignBookingToGuest(Guid bookingId, Guid guestId) 
-{
-    // Oops! Parameters are interchangeable, which is dangerous!
-}
-
-```
-
-## 📌 Conclusion  
-
-`StronglyTypedId<T>` enhances type safety, improves readability, and prevents common ID-related bugs.  
-Implementing it in your domain model makes your code cleaner, safer, and more maintainable.
-
-## 🌟 License
-
 This project is open-source and free to use.
+
+
+## 📁 Sample Project Structure
+/StronglyTypedId │ README.md │ StronglyTypedId.sln │ └───/src │ │ TestNest.StronglyTypeId.csproj │ │ StronglyTypedId.cs │ │ GuestId.cs │ └───/tests │ GuestIdTests.cs │ Program.cs (Test console)
+
