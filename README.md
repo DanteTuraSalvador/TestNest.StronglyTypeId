@@ -1,14 +1,15 @@
-# 🚀 StronglyTypedId in C#
+# 🚀 StronglyTypedId Library
 
-`StronglyTypedId<T>` is a base class for creating strongly typed IDs in C#. It encapsulates `Guid` values, ensuring type safety and improving code readability. This is useful for domain-driven design (DDD) to distinguish different entity IDs.
+A .NET library for creating type-safe identifiers that prevent primitive obsession and enforce domain constraints.
 
 ## ✨ Features
 
-- ✅ **Strong Typing**: Avoids confusion between different entity IDs.
-- ✅ **Immutable**: Ensures IDs cannot be modified after creation.
-- ✅ **Automatic ID Generation**: Supports `Guid.NewGuid()`.
-- ✅ **Parsing and Validation**: Methods to parse from `string` and `Guid`.
-- ✅ **Comparison and Equality**: Implements `IComparable` and `IEquatable`.
+- 🛡️ **Type-safe** - Prevents mixing different ID types  
+- ⚡ **Zero overhead** - Compiles down to `Guid` at runtime  
+- 🧵 **Thread-safe** - Singleton `Empty` pattern  
+- 🚫 **Validation** - Rejects empty/invalid GUIDs  
+- 🔄 **Conversion** - Implicit/explicit operators  
+- 📦 **Self-contained** - No external dependencies  
 
 ---
 
@@ -183,6 +184,24 @@ var emptyId = GuestId.Empty();
 Console.WriteLine(emptyId);  // 00000000-0000-0000-0000-000000000000
 
 ```
+
+## 📖 API Reference
+
+### 🔹 Core Methods
+
+| Method | Description |
+|--------|------------|
+| `T.New()` | Creates new ID with random GUID |
+| `T.Empty()` | Returns singleton empty instance |
+| `T.Parse(string)` | Parses from GUID string (throws on failure) |
+| `T.TryParse(string, out T?)` | Safe parsing without exceptions |
+
+### 🔹 Operators
+
+| Operator | Behavior |
+|----------|---------|
+| `implicit Guid` | Converts to underlying GUID |
+| `explicit T` | Converts from valid GUID string |
 
 ## 🎯 Why Use StronglyTypedId?
 
