@@ -247,12 +247,15 @@ This project is open-source and free to use.
 ## 📁 Project Structure
 
 ```bash
-StronglyTypedId/
+TestNest.StronglyTypeId/
 ├── src/
-│   ├── TestNest.StronglyTypeId/
-│   │   ├── StronglyTypedId.cs        # Core abstract base class
-│   │   ├── GuestId.cs                # Sample implementation
-│   │   ├── Exceptions.cs             # Custom exceptions
+│   ├── StronglyTypeId/
+│   │   ├── Common
+│   │   │    ├── StronglyTypedId.cs                        # Core abstract base class
+│   │   ├── Exceptions
+│   │   │    ├── StronglyTypeIdException.cs                # Custom exceptions
+│   │   ├── StronglyTypeIds
+│   │   │    ├── GuestId.cs                                # Sample implementation
 │   │   └── TestNest.StronglyTypeId.csproj
 │   │
 │   └── TestConsole/                   # Optional test console
