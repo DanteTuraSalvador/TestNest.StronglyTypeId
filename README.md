@@ -148,3 +148,11 @@ namespace TestNest.StronglyTypeId.StronglyTypeIds
 }
 
 ```
+## 📌 Usage Examples
+
+## ✅ Creating a new ID
+
+```csharp
+var guestId = GuestId.New();
+Console.WriteLine(guestId);  // e.g., "b123fbb0-92a6-4f41-85b5-61a4d7306ef7"
+```
