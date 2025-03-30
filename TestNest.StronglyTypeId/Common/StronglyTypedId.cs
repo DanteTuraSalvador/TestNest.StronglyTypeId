@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using System.Text.Json.Serialization;
-using TestNest.Domain.Exceptions;
+using TestNest.StronglyTypeId.Exceptions;
 
 namespace TestNest.StronglyTypeId.Common;
 
@@ -25,34 +25,41 @@ public abstract record StronglyTypedId<T> : IComparable<T>, IEquatable<T>, IComp
     public static T Empty()
     {
         var idInstance = Activator.CreateInstance(typeof(T), Guid.Empty) as T;
-
-        if (idInstance is null)
-            throw new StronglyTypedIdException.Creation(typeof(T), StronglyTypedIdException.CreationFailureReason.NullInstance);
-
-        return idInstance;
+        return idInstance ?? throw StronglyTypedIdException.NullInstanceCreation(typeof(T));
     }
 
     public static implicit operator StronglyTypedId<T>?(string? input) =>
         TryParse(input, out var id) ? id : null;
 
     public static T New() => Activator.CreateInstance(typeof(T), Guid.NewGuid()) as T
-        ?? throw new StronglyTypedIdException.Creation(typeof(T), StronglyTypedIdException.CreationFailureReason.NullInstance);
+        ?? throw StronglyTypedIdException.NullInstanceCreation(typeof(T));
 
     public static bool TryParse(string? input, out T? result)
     {
         result = null;
 
-        if (Guid.TryParse(input, out var guid))
+        if (string.IsNullOrEmpty(input))
         {
-            result = Activator.CreateInstance(typeof(T), guid) as T;
-            return result is not null;
+            return false;
         }
 
-        return false;
+        if (!Guid.TryParse(input, out var guid))
+        {
+            return false;
+        }
+
+        result = Activator.CreateInstance(typeof(T), guid) as T;
+        return result is not null;
     }
 
     public static bool TryParse(Guid input, out T? result)
     {
+        if (input == Guid.Empty)
+        {
+            result = null;
+            return false;
+        }
+
         result = Activator.CreateInstance(typeof(T), input) as T;
         return result is not null;
     }

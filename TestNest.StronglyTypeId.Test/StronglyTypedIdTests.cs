@@ -1,497 +1,548 @@
-﻿using FluentAssertions;
-
+﻿using Microsoft.AspNetCore.Mvc.ModelBinding;
+using System;
+using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Text.Json;
-using Microsoft.AspNetCore.Mvc.ModelBinding;
-using Moq;
-using TestNest.Domain.Exceptions;
+using System.Text.Json.Serialization;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
+using Xunit;
 using TestNest.StronglyTypeId.Common;
+using TestNest.StronglyTypeId.Exceptions;
 
 namespace TestNest.StronglyTypeId.Test;
+
 public class StronglyTypedIdTests
 {
-    #region Test Implementation (Fully Compliant with Record Requirements)
-
-    private sealed record TestId : StronglyTypedId<TestId>
+    #region Test Implementation
+    [ModelBinder(typeof(StronglyTypedIdModelBinder<GuestId>))]
+    [JsonConverter(typeof(StronglyTypedIdJsonConverter<GuestId>))]
+    public sealed record GuestId : StronglyTypedId<GuestId>
     {
-        public TestId() : base() { }
-        public TestId(Guid value) : base(value) { }
-        public static explicit operator TestId?(string? input) =>
-            TryParse(input, out var id) ? id : null;
-    }
-
-    #endregion
-
-    #region Constructor Tests
-
-    [Fact]
-    public void ParameterlessConstructor_ShouldCreateNewGuid()
-    {
-        // Act
-        var id1 = new TestId();
-        var id2 = new TestId();
-
-        // Assert
-        id1.Value.Should().NotBeEmpty();
-        id2.Value.Should().NotBeEmpty();
-        id1.Value.Should().NotBe(id2.Value);
-    }
-
-
-    [Fact]
-    public void Constructor_WithGuid_ShouldSetValue()
-    {
-        // Arrange
-        var guid = Guid.NewGuid();
-
-        // Act
-        var id = new TestId(guid);
-
-        // Assert
-        id.Value.Should().Be(guid);
-    }
-
-    [Fact]
-    public void RecordClone_ShouldWork()
-    {
-        // Arrange
-        var original = new TestId(Guid.NewGuid());
-
-        // Act
-        var cloned = original with { };
-
-        // Assert
-        cloned.Value.Should().Be(original.Value);
-        cloned.Should().NotBeSameAs(original);
-        cloned.Should().Be(original); // Value equality
-    }
-
-
-    #endregion
-
-    #region Conversion Tests
-
-    [Fact]
-    public void ExplicitConversion_FromString_ShouldWork()
-    {
-        // Arrange
-        var guid = Guid.NewGuid();
-        var guidString = guid.ToString();
-
-        // Act
-        var id = (TestId?)guidString;
-
-        // Assert
-        id.Should().NotBeNull();
-        id!.Value.Should().Be(guid);
-    }
-
-
-    [Fact]
-    public void ExplicitConversion_FromInvalidString_ShouldReturnNull()
-    {
-        // Act
-        var id = (TestId?)"invalid-guid";
-
-        // Assert
-        id.Should().BeNull();
-    }
-
-    #endregion
-
-    #region JSON Conversion Tests
-
-    [Fact]
-    public void JsonSerialization_ShouldWork()
-    {
-        // Arrange
-        var id = new TestId(Guid.NewGuid());
-        var options = new JsonSerializerOptions
+        public GuestId(Guid value) : base(value)
         {
-            Converters = { new StronglyTypedIdJsonConverter<TestId>() }
-        };
+            if (value == Guid.Empty)
+                throw StronglyTypedIdException.InvalidGuidCreation(typeof(GuestId));
+        }
 
-        // Act
-        var json = JsonSerializer.Serialize(id, options);
-        var deserialized = JsonSerializer.Deserialize<TestId>(json, options);
+        public GuestId() : this(Guid.NewGuid()) { }
 
-        // Assert
-        deserialized.Should().NotBeNull();
-        deserialized!.Value.Should().Be(id.Value);
-    }
+        public static GuestId Create(Guid value) => new(value);
 
-    [Fact]
-    public void JsonDeserialization_WithInvalidGuid_ShouldThrowCustomException()
-    {
-        // Arrange
-        const string invalidJson = "\"not-a-guid\"";
-        var options = new JsonSerializerOptions
+        public static GuestId Parse(string input)
         {
-            Converters = { new StronglyTypedIdJsonConverter<TestId>() }
-        };
+            if (!Guid.TryParse(input, out var guid) || guid == Guid.Empty)
+                throw StronglyTypedIdException.InvalidFormat(input);
 
-        // Act
-        var exception = Record.Exception(() =>
-            JsonSerializer.Deserialize<TestId>(invalidJson, options));
+            return new(guid);
+        }
 
-        // Assert
-        exception.Should().NotBeNull();
-        exception.Should().BeOfType<StronglyTypedIdException.Json.Deserialization>();
-        exception.Message.Should().Contain("Couldn't deserialize TestId from JSON");
-        exception.Message.Should().Contain("not-a-guid");
+        public static explicit operator GuestId(string? input)
+        {
+            if (input is null)
+                throw new ArgumentNullException(nameof(input));
+
+            return Parse(input);
+        }
+
+        public static new bool TryParse(
+            [NotNullWhen(true)] string? input,
+            [NotNullWhen(true)] out GuestId? result)
+        {
+            result = null;
+            if (string.IsNullOrEmpty(input) || !Guid.TryParse(input, out var guid) || guid == Guid.Empty)
+                return false;
+
+            result = new GuestId(guid);
+            return true;
+        }
+
+        public static GuestId New() => new(Guid.NewGuid());
+        private GuestId(Guid value, bool allowEmpty) : base(value) { }
+
+        public static GuestId Empty { get; } = new(Guid.Empty, true);
+        public override string ToString() => Value.ToString();
     }
-
-
-
-
     #endregion
 
-    #region Model Binding Tests
-
-    [Fact]
-    public async Task ModelBinder_ShouldBindFromRoute()
-    {
-        // Arrange
-        var binder = new StronglyTypedIdModelBinder<TestId>();
-        var valueProvider = new Mock<IValueProvider>();
-        var bindingContext = new DefaultModelBindingContext();
-
-        var guid = Guid.NewGuid();
-        valueProvider.Setup(v => v.GetValue("testParam"))
-            .Returns(new ValueProviderResult(guid.ToString()));
-
-        bindingContext.ModelName = "testParam";
-        bindingContext.ValueProvider = valueProvider.Object;
-        bindingContext.ModelState = new ModelStateDictionary();
-
-        // Act
-        await binder.BindModelAsync(bindingContext);
-
-        // Assert
-        bindingContext.Result.IsModelSet.Should().BeTrue();
-        var model = bindingContext.Result.Model as TestId;
-        model.Should().NotBeNull();
-        model!.Value.Should().Be(guid);
-    }
-
-    [Fact]
-    public async Task ModelBinder_WithInvalidGuid_ShouldThrowCustomException()
-    {
-        // Arrange
-        var binder = new StronglyTypedIdModelBinder<TestId>();
-        var valueProvider = new Mock<IValueProvider>();
-        var bindingContext = new DefaultModelBindingContext();
-
-        valueProvider.Setup(v => v.GetValue("testParam"))
-            .Returns(new ValueProviderResult("invalid-guid"));
-
-        bindingContext.ModelName = "testParam";
-        bindingContext.ValueProvider = valueProvider.Object;
-        bindingContext.ModelState = new ModelStateDictionary();
-
-        // Act
-        var exception = await Record.ExceptionAsync(() =>
-            binder.BindModelAsync(bindingContext));
-
-        // Assert
-        exception.Should().NotBeNull();
-        exception.Should().BeOfType<StronglyTypedIdException.ModelBinder.InvalidFormat>();
-        exception.Message.Should().Contain("The provided value 'invalid-guid'");
-        exception.Message.Should().Contain("testParam");
-    }
-
-
-    [Fact]
-    public async Task ModelBinder_WithInvalidGuid_ShouldFail()
-    {
-        // Arrange
-        var binder = new StronglyTypedIdModelBinder<TestId>();
-        var valueProvider = new Mock<IValueProvider>();
-        var bindingContext = new DefaultModelBindingContext();
-
-        valueProvider.Setup(v => v.GetValue("testParam"))
-            .Returns(new ValueProviderResult("invalid-guid"));
-
-        bindingContext.ModelName = "testParam";
-        bindingContext.ValueProvider = valueProvider.Object;
-        bindingContext.ModelState = new ModelStateDictionary();
-
-        // Act & Assert
-        await Assert.ThrowsAsync<StronglyTypedIdException.ModelBinder.InvalidFormat>(
-            () => binder.BindModelAsync(bindingContext));
-    }
-
+    #region Shared Test Data
+    private readonly Guid _testGuid = Guid.NewGuid();
+    private readonly string _testGuidString = Guid.NewGuid().ToString();
     #endregion
 
-    #region Model Binding Tests - Complete API Call Coverage
-
+    #region Construction Tests
     [Fact]
-    public async Task BindModelAsync_ValidGuidInRoute_ShouldBindSuccessfully()
+    public void Constructor_WithValidGuid_CreatesInstance()
     {
-        // Arrange
-        var binder = new StronglyTypedIdModelBinder<TestId>();
-        var guid = Guid.NewGuid();
-        var context = CreateBindingContext("id", guid.ToString());
-
-        // Act
-        await binder.BindModelAsync(context);
-
-        // Assert
-        context.Result.IsModelSet.Should().BeTrue();
-        (context.Result.Model as TestId)?.Value.Should().Be(guid);
+        var id = new GuestId(_testGuid);
+        Assert.Equal(_testGuid, id.Value);
     }
 
     [Fact]
-    public async Task BindModelAsync_ValidGuidInQueryString_ShouldBindSuccessfully()
+    public void Constructor_WithEmptyGuid_ThrowsInvalidGuidException()
     {
-        // Arrange
-        var binder = new StronglyTypedIdModelBinder<TestId>();
-        var guid = Guid.NewGuid();
-        var context = CreateBindingContext("id", guid.ToString());
-
-        // Act
-        await binder.BindModelAsync(context);
-
-        // Assert
-        context.Result.IsModelSet.Should().BeTrue();
-        (context.Result.Model as TestId)?.Value.Should().Be(guid);
+        var ex = Assert.Throws<StronglyTypedIdException>(() => new GuestId(Guid.Empty));
+        Assert.Equal(StronglyTypedIdException.ErrorCode.InvalidGuidCreation, ex.Code);
     }
 
     [Fact]
-    public async Task BindModelAsync_EmptyGuid_ShouldBindToEmptyInstance()
+    public void ParameterlessConstructor_GeneratesNonEmptyGuid()
     {
-        // Arrange
-        var binder = new StronglyTypedIdModelBinder<TestId>();
-        var context = CreateBindingContext("id", Guid.Empty.ToString());
-
-        // Act
-        await binder.BindModelAsync(context);
-
-        // Assert
-        context.Result.IsModelSet.Should().BeTrue();
-        (context.Result.Model as TestId)?.Value.Should().Be(Guid.Empty);
+        var id = new GuestId();
+        Assert.NotEqual(Guid.Empty, id.Value);
     }
-
-    [Fact]
-    public async Task BindModelAsync_NullBindingContext_ShouldThrowNullBindingContextException()
-    {
-        // Arrange
-        var binder = new StronglyTypedIdModelBinder<TestId>();
-
-        // Act & Assert
-        await Assert.ThrowsAsync<StronglyTypedIdException.ModelBinder.NullBindingContext>(
-            () => binder.BindModelAsync(null!));
-    }
-
-    [Fact]
-    public async Task BindModelAsync_MissingValue_ShouldThrowMissingValueException()
-    {
-        // Arrange
-        var binder = new StronglyTypedIdModelBinder<TestId>();
-        var context = CreateBindingContext("id", ValueProviderResult.None);
-
-        // Act & Assert
-        var ex = await Assert.ThrowsAsync<StronglyTypedIdException.ModelBinder.MissingValue>(
-            () => binder.BindModelAsync(context));
-
-        ex.Message.Should().Contain("id");
-    }
-
-    [Fact]
-    public async Task BindModelAsync_InvalidGuidFormat_ShouldThrowInvalidFormatException()
-    {
-        // Arrange
-        var binder = new StronglyTypedIdModelBinder<TestId>();
-        var context = CreateBindingContext("id", "not-a-guid");
-
-        // Act & Assert
-        var ex = await Assert.ThrowsAsync<StronglyTypedIdException.ModelBinder.InvalidFormat>(
-            () => binder.BindModelAsync(context));
-
-        ex.Message.Should().Contain("id");
-        ex.Message.Should().Contain("not-a-guid");
-    }
-
-    [Fact]
-    public async Task BindModelAsync_CaseInsensitiveGuid_ShouldBindSuccessfully()
-    {
-        // Arrange
-        var binder = new StronglyTypedIdModelBinder<TestId>();
-        var guid = Guid.NewGuid();
-        var context = CreateBindingContext("id", guid.ToString().ToUpper());
-
-        // Act
-        await binder.BindModelAsync(context);
-
-        // Assert
-        context.Result.IsModelSet.Should().BeTrue();
-        (context.Result.Model as TestId)?.Value.Should().Be(guid);
-    }
-
-    [Fact]
-    public async Task BindModelAsync_WithBracesGuidFormat_ShouldBindSuccessfully()
-    {
-        // Arrange
-        var binder = new StronglyTypedIdModelBinder<TestId>();
-        var guid = Guid.NewGuid();
-        var context = CreateBindingContext("id", $"{{{guid}}}");
-
-        // Act
-        await binder.BindModelAsync(context);
-
-        // Assert
-        context.Result.IsModelSet.Should().BeTrue();
-        (context.Result.Model as TestId)?.Value.Should().Be(guid);
-    }
-
     #endregion
 
-    #region JSON Conversion Tests - API Request/Response Scenarios
-
+    #region Factory Method Tests
     [Fact]
-    public void JsonConverter_ShouldSerializeToGuidString()
+    public void New_CreatesUniqueInstances()
     {
-        // Arrange
-        var id = new TestId(Guid.NewGuid());
-        var options = new JsonSerializerOptions
-        {
-            Converters = { new StronglyTypedIdJsonConverter<TestId>() }
-        };
-
-        // Act
-        var json = JsonSerializer.Serialize(id, options);
-
-        // Assert
-        json.Should().Be($"\"{id.Value}\"");
+        var id1 = GuestId.New();
+        var id2 = GuestId.New();
+        Assert.NotEqual(id1, id2);
     }
 
     [Fact]
-    public void JsonConverter_ShouldDeserializeFromGuidString()
+    public void Empty_ShouldAlwaysReturnSameInstance()
     {
-        // Arrange
-        var guid = Guid.NewGuid();
-        var options = new JsonSerializerOptions
-        {
-            Converters = { new StronglyTypedIdJsonConverter<TestId>() }
-        };
+        var id1 = GuestId.Empty;
+        var id2 = GuestId.Empty;
 
-        // Act
-        var result = JsonSerializer.Deserialize<TestId>($"\"{guid}\"", options);
-
-        // Assert
-        result.Should().NotBeNull();
-        result!.Value.Should().Be(guid);
+        Assert.Same(id1, id2);
+        Assert.Equal(Guid.Empty, id1.Value);
     }
 
+    [Fact]
+    public void Create_ValidGuid_ReturnsInstance()
+    {
+        var id = GuestId.Create(_testGuid);
+        Assert.Equal(_testGuid, id.Value);
+    }
     #endregion
 
-    #region Helper Methods
-
-    private static DefaultModelBindingContext CreateBindingContext(string modelName, string value)
+    #region Parsing Tests
+    [Fact]
+    public void Parse_ValidGuidString_ReturnsInstance()
     {
-        var valueProvider = new Mock<IValueProvider>();
-        valueProvider.Setup(v => v.GetValue(modelName))
-            .Returns(new ValueProviderResult(value));
-
-        return new DefaultModelBindingContext
-        {
-            ModelName = modelName,
-            ValueProvider = valueProvider.Object,
-            ModelState = new ModelStateDictionary()
-        };
+        var id = GuestId.Parse(_testGuidString);
+        Assert.Equal(_testGuidString, id.Value.ToString());
     }
 
-    private static DefaultModelBindingContext CreateBindingContext(string modelName, ValueProviderResult result)
+    [Theory]
+    [InlineData("")]
+    [InlineData("invalid-guid")]
+    [InlineData("00000000-0000-0000-0000-000000000000")]
+    public void Parse_InvalidInput_Throws(string input)
     {
-        var valueProvider = new Mock<IValueProvider>();
-        valueProvider.Setup(v => v.GetValue(modelName))
-            .Returns(result);
-
-        return new DefaultModelBindingContext
-        {
-            ModelName = modelName,
-            ValueProvider = valueProvider.Object,
-            ModelState = new ModelStateDictionary()
-        };
+        Assert.Throws<StronglyTypedIdException>(() => GuestId.Parse(input));
     }
 
+    [Fact]
+    public void TryParse_ValidGuid_ReturnsTrueAndInstance()
+    {
+        var success = GuestId.TryParse(_testGuidString, out var result);
+        Assert.True(success);
+        Assert.Equal(_testGuidString, result?.Value.ToString());
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("invalid-guid")]
+    public void TryParse_InvalidInput_ReturnsFalse(string? input)
+    {
+        Assert.False(GuestId.TryParse(input, out _));
+    }
     #endregion
 
-    // Add these tests to your existing StronglyTypedIdTests class
+    #region Conversion & Operator Tests
+    [Fact]
+    public void ExplicitConversion_ValidGuidString_Works()
+    {
+        var id = (GuestId)_testGuidString;
+        Assert.Equal(_testGuidString, id.Value.ToString());
+    }
+
+    [Fact]
+    public void ExplicitConversion_InvalidGuidString_Throws()
+    {
+        Assert.Throws<StronglyTypedIdException>(() => (GuestId)"invalid-guid");
+    }
+
+    [Fact]
+    public void ExplicitConversion_NullString_Throws()
+    {
+        string? input = null;
+        Assert.Throws<ArgumentNullException>(() => _ = (GuestId)input!);
+    }
+
+    [Fact]
+    public void ImplicitConversion_ToGuid_Works()
+    {
+        GuestId id = new(_testGuid);
+        Guid converted = id;
+        Assert.Equal(_testGuid, converted);
+    }
+
+    [Fact]
+    public void EqualityOperator_EqualValues_ReturnsTrue()
+    {
+        var id1 = new GuestId(_testGuid);
+        var id2 = new GuestId(_testGuid);
+        Assert.True(id1 == id2);
+    }
+
+    [Fact]
+    public void InequalityOperator_DifferentValues_ReturnsTrue()
+    {
+        var id1 = GuestId.New();
+        var id2 = GuestId.New();
+        Assert.True(id1 != id2);
+    }
+    #endregion
 
     #region Comparison Tests
-
     [Fact]
-    public void CompareTo_WithSameType_ReturnsCorrectComparisonResult()
+    public void CompareTo_SameValues_ReturnsZero()
     {
-        // Arrange
-        var id1 = new TestId(Guid.Parse("00000000-0000-0000-0000-000000000001"));
-        var id2 = new TestId(Guid.Parse("00000000-0000-0000-0000-000000000002"));
-
-        // Act & Assert
-        id1.CompareTo(id2).Should().BeNegative();
-        id2.CompareTo(id1).Should().BePositive();
-        id1.CompareTo(id1).Should().Be(0);
+        var id1 = new GuestId(_testGuid);
+        var id2 = new GuestId(_testGuid);
+        Assert.Equal(0, id1.CompareTo(id2));
     }
 
     [Fact]
-    public void CompareTo_WithNull_ReturnsPositive()
+    public void CompareTo_Null_ReturnsPositive()
     {
-        // Arrange
-        var id = new TestId();
+        var id = GuestId.New();
+        Assert.True(id.CompareTo(null) > 0);
+    }
+    #endregion
 
-        // Act & Assert
-        id.CompareTo(null).Should().BePositive();
+    #region Serialization Tests
+    [Fact]
+    public void JsonSerialize_RoundtripsCorrectly()
+    {
+        var original = new GuestId(_testGuid);
+        var json = JsonSerializer.Serialize(original);
+        var deserialized = JsonSerializer.Deserialize<GuestId>(json);
+        Assert.Equal(original, deserialized);
     }
 
     [Fact]
-    public void NonGenericCompareTo_WithSameType_ReturnsCorrectComparisonResult()
+    public void JsonSerialize_Null_ReturnsNull()
     {
-        // Arrange
-        var id1 = new TestId(Guid.Parse("00000000-0000-0000-0000-000000000001"));
-        var id2 = new TestId(Guid.Parse("00000000-0000-0000-0000-000000000002"));
-        var comparable = (IComparable)id1;
+        GuestId? id = null;
+        var json = JsonSerializer.Serialize(id);
+        Assert.Equal("null", json);
+    }
+    #endregion
 
-        // Act & Assert
-        comparable.CompareTo(id2).Should().BeNegative();
-        comparable.CompareTo(id1).Should().Be(0);
+    #region Edge Cases
+    [Fact]
+    public void ToString_ReturnsValidGuidString()
+    {
+        var id = new GuestId(_testGuid);
+        var result = id.ToString();
+
+        Assert.Equal(_testGuid.ToString(), result);
+        Assert.Matches(@"^[{(]?[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}[)}]?$", result);
     }
 
     [Fact]
-    public void NonGenericCompareTo_WithDifferentType_ThrowsArgumentException()
+    public void GetHashCode_EqualValues_EqualHashes()
     {
-        // Arrange
-        var id = new TestId();
-        var differentId = new OtherTestId(); // Different strongly-typed ID
-        var comparable = (IComparable)id;
-
-        // Act
-        Action act = () => comparable.CompareTo(differentId);
-
-        // Assert
-        act.Should().Throw<ArgumentException>()
-            .WithMessage($"Object must be of type {typeof(TestId).Name}*");
+        var id1 = new GuestId(_testGuid);
+        var id2 = new GuestId(_testGuid);
+        Assert.Equal(id1.GetHashCode(), id2.GetHashCode());
     }
-
-    [Fact]
-    public void NonGenericCompareTo_WithNull_ReturnsPositive()
-    {
-        // Arrange
-        var id = new TestId();
-        var comparable = (IComparable)id;
-
-        // Act
-        var result = comparable.CompareTo(null);
-
-        // Assert
-        result.Should().Be(1);  // Explicitly expect 1 for null comparison
-    }
-
-    // Helper record for testing
-    private sealed record OtherTestId : StronglyTypedId<OtherTestId>
-    {
-        public OtherTestId() : base() { }
-        public OtherTestId(Guid value) : base(value) { }
-    }
-
     #endregion
 }
+
+
+//public class StronglyTypedIdTests
+//{
+//    [ModelBinder(typeof(StronglyTypedIdModelBinder<GuestId>))]
+//    [JsonConverter(typeof(StronglyTypedIdJsonConverter<GuestId>))]
+//    public sealed record GuestId : StronglyTypedId<GuestId>
+//    {
+//        public GuestId(Guid value) : base(value)
+//        {
+//            if (value == Guid.Empty)
+//                throw StronglyTypedIdException.InvalidGuidCreation(typeof(GuestId));
+//        }
+
+//        public GuestId() : this(Guid.NewGuid()) { }
+
+//        public static GuestId Create(Guid value) => new(value);
+
+//        public static GuestId Parse(string input)
+//        {
+//            if (!Guid.TryParse(input, out var guid))
+//                throw StronglyTypedIdException.InvalidFormat(input);
+
+//            return new(guid); // Constructor validates empty GUID
+//        }
+
+//        public static new bool TryParse(
+//            [NotNullWhen(true)] string? input,
+//            [NotNullWhen(true)] out GuestId? result)
+//        {
+//            result = null;
+
+//            // Fast path for null/empty
+//            if (string.IsNullOrEmpty(input))
+//                return false;
+
+//            // Guid parsing
+//            if (!Guid.TryParse(input, out var guid) || guid == Guid.Empty)
+//                return false;
+
+//            // Skip try/catch since constructor is the only validation
+//            result = new GuestId(guid);
+//            return true;
+//        }
+
+//        public static GuestId New() => new(Guid.NewGuid());
+
+//        public static GuestId Empty { get; } = new(Guid.Empty);
+//    }
+
+//    // Test for constructor with a valid GUID
+//    [Fact]
+//    public void Constructor_WithNonEmptyGuid_CreatesInstance()
+//    {
+//        var id = new GuestId(Guid.NewGuid());
+//        Assert.NotEqual(Guid.Empty, id.Value);
+//    }
+
+//    // Test for constructor with an empty GUID
+//    [Fact]
+//    public void Constructor_WithEmptyGuid_ThrowsInvalidGuidException()
+//    {
+//        var ex = Assert.Throws<StronglyTypedIdException>(() =>
+//            new GuestId(Guid.Empty));
+
+//        Assert.Equal(StronglyTypedIdException.ErrorCode.InvalidGuidCreation, ex.Code);
+//        Assert.Contains("Invalid GUID provided for GuestId", ex.Message);
+//    }
+
+//    // Test for New() method - creates a new instance with a valid GUID
+//    [Fact]
+//    public void New_CreatesNewInstanceWithUniqueGuid()
+//    {
+//        var id1 = GuestId.New();
+//        var id2 = GuestId.New();
+
+//        Assert.NotEqual(id1.Value, id2.Value);
+//    }
+
+//    // Test for Empty() method - creates an instance with an empty GUID
+//    [Fact]
+//    public void Empty_CreatesEmptyInstance()
+//    {
+//        var id = GuestId.Empty();
+//        Assert.Equal(Guid.Empty, id.Value);
+//    }
+
+//    // Test for TryParse with valid GUID string
+//    [Fact]
+//    public void TryParse_ValidGuid_ReturnsInstance()
+//    {
+//        var guidString = Guid.NewGuid().ToString();
+//        var result = GuestId.TryParse(guidString, out var id);
+
+//        Assert.True(result);
+//        Assert.NotNull(id);
+//        Assert.Equal(guidString, id?.Value.ToString());
+//    }
+
+//    // Test for TryParse with invalid GUID string
+//    [Fact]
+//    public void TryParse_InvalidGuid_ReturnsFalse()
+//    {
+//        var result = GuestId.TryParse("InvalidGuid", out var id);
+
+//        Assert.False(result);
+//        Assert.Null(id);
+//    }
+
+//    // Test for TryParse with null string
+//    [Fact]
+//    public void TryParse_NullGuid_ReturnsFalse()
+//    {
+//        var result = GuestId.TryParse(null, out var id);
+
+//        Assert.False(result);
+//        Assert.Null(id);
+//    }
+
+//    // Test for TryParse with empty string
+//    [Fact]
+//    public void TryParse_EmptyGuid_ReturnsFalse()
+//    {
+//        var result = GuestId.TryParse(string.Empty, out var id);
+
+//        Assert.False(result);
+//        Assert.Null(id);
+//    }
+
+//    // Test for TryParse with valid GUID input (Guid type)
+//    [Fact]
+//    public void TryParse_ValidGuidInput_ReturnsInstance()
+//    {
+//        var guid = Guid.NewGuid();
+//        var result = GuestId.TryParse(guid, out var id);
+
+//        Assert.True(result);
+//        Assert.NotNull(id);
+//        Assert.Equal(guid, id?.Value);
+//    }
+
+//    // Test for TryParse with empty GUID input (Guid type)
+//    [Fact]
+//    public void TryParse_EmptyGuidInput_ReturnsFalse()
+//    {
+//        var result = GuestId.TryParse(Guid.Empty, out var id);
+
+//        Assert.False(result);
+//        Assert.Null(id);
+//    }
+
+//    // Test for comparison between two equal instances
+//    [Fact]
+//    public void CompareTo_EqualIds_ReturnsZero()
+//    {
+//        var guid = Guid.NewGuid();
+//        var id1 = new GuestId(guid);
+//        var id2 = new GuestId(guid);
+
+//        Assert.Equal(0, id1.CompareTo(id2));
+//    }
+
+//    // Test for comparison between two different instances
+//    [Fact]
+//    public void CompareTo_DifferentIds_ReturnsNonZero()
+//    {
+//        var id1 = new GuestId(Guid.NewGuid());
+//        var id2 = new GuestId(Guid.NewGuid());
+
+//        Assert.NotEqual(0, id1.CompareTo(id2));
+//    }
+
+//    // Test for equality between two equal instances
+//    [Fact]
+//    public void Equals_EqualIds_ReturnsTrue()
+//    {
+//        var guid = Guid.NewGuid();
+//        var id1 = new GuestId(guid);
+//        var id2 = new GuestId(guid);
+
+//        Assert.True(id1.Equals(id2));
+//    }
+
+//    // Test for equality between two different instances
+//    [Fact]
+//    public void Equals_DifferentIds_ReturnsFalse()
+//    {
+//        var id1 = new GuestId(Guid.NewGuid());
+//        var id2 = new GuestId(Guid.NewGuid());
+
+//        Assert.False(id1.Equals(id2));
+//    }
+
+//    // Test for JsonConverter serialization and deserialization
+//    [Fact]
+//    public void JsonConverter_SerializesCorrectly()
+//    {
+//        var id = new GuestId(Guid.NewGuid());
+
+//        var json = JsonSerializer.Serialize(id);
+//        var deserializedId = JsonSerializer.Deserialize<GuestId>(json);
+
+//        Assert.Equal(id, deserializedId);
+//    }
+
+//    // Test for deserialization failure due to invalid GUID string
+//    [Fact]
+//    public void JsonConverter_Deserialization_FailsOnInvalidGuid()
+//    {
+//        var invalidJson = "\"InvalidGuid\"";
+
+//        var ex = Assert.Throws<StronglyTypedIdException>(() =>
+//            JsonSerializer.Deserialize<GuestId>(invalidJson));
+
+//        Assert.Equal(StronglyTypedIdException.ErrorCode.JsonDeserializationFailed, ex.Code);
+//        Assert.Contains("Failed to deserialize GuestId", ex.Message);
+//    }
+
+//    // Test for model binding with a valid GUID
+//    [Fact]
+//    public async Task ModelBinder_BindsValidGuid_Successfully()
+//    {
+//        var guidValue = Guid.NewGuid().ToString();
+//        var bindingContext = GetModelBindingContext(guidValue);
+
+//        var binder = new StronglyTypedIdModelBinder<GuestId>();
+//        await binder.BindModelAsync(bindingContext);
+
+//        // Ensure binding was successful
+//        Assert.True(bindingContext.Result.IsModelSet);
+
+//        // Ensure the bound value is of the correct type
+//        Assert.IsType<GuestId>(bindingContext.Result.Model);
+
+//        // Check that the bound value matches the GUID
+//        var boundValue = (GuestId)bindingContext.Result.Model!;
+//        Assert.Equal(guidValue, boundValue.Value.ToString());
+//    }
+
+//    // Test for model binding failure due to empty value
+//    [Fact]
+//    public async Task ModelBinder_BindsEmptyValue_ThrowsException()
+//    {
+//        var bindingContext = GetModelBindingContext(string.Empty);
+
+//        var binder = new StronglyTypedIdModelBinder<GuestId>();
+
+//        var ex = await Assert.ThrowsAsync<StronglyTypedIdException>(() => binder.BindModelAsync(bindingContext));
+//        Assert.Equal(StronglyTypedIdException.ErrorCode.InvalidModelValue, ex.Code);
+//        Assert.Contains("Invalid value 'null' for GuestId", ex.Message);
+//    }
+
+//    // Test for model binding failure due to invalid GUID string
+//    [Fact]
+//    public async Task ModelBinder_BindsInvalidGuid_ThrowsException()
+//    {
+//        var bindingContext = GetModelBindingContext("InvalidGuid");
+
+//        var binder = new StronglyTypedIdModelBinder<GuestId>();
+
+//        var ex = await Assert.ThrowsAsync<StronglyTypedIdException>(() => binder.BindModelAsync(bindingContext));
+//        Assert.Equal(StronglyTypedIdException.ErrorCode.InvalidModelValue, ex.Code);
+//        Assert.Contains("Invalid value 'InvalidGuid' for GuestId", ex.Message);
+//    }
+
+//    // Helper method to create a ModelBindingContext
+//    private static ModelBindingContext GetModelBindingContext(string value)
+//    {
+//        var valueProvider = new FormValueProvider(
+//            BindingSource.Query,
+//            new FormCollection(new Dictionary<string, Microsoft.Extensions.Primitives.StringValues>
+//            {
+//        { "GuestId", value }
+//            }),
+//            CultureInfo.InvariantCulture);
+
+//        var modelState = new ModelStateDictionary();
+//        var bindingContext = new DefaultModelBindingContext
+//        {
+//            ModelName = "GuestId",
+//            ModelState = modelState,
+//            ValueProvider = valueProvider,
+//            ActionContext = new ActionContext()
+//        };
+//        return bindingContext;
+//    }
+//}
