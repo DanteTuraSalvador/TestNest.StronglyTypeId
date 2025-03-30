@@ -86,6 +86,7 @@ namespace TestNest.StronglyTypeId.Common
     }
 }
 
+### 🔹 StronglyTypedId Base Class
 
 ## 🔹 Example: Creating a `GuestId` Strongly Typed ID
 
