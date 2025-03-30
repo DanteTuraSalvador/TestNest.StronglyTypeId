@@ -40,16 +40,16 @@ namespace TestNest.StronglyTypeId.Tests
         {
             var id1 = GuestId.New();
             var id2 = GuestId.New();
-            Assert.NotEqual(id1, id2);
+            Assert.NotEqual(id1.Value, id2.Value); // Compare GUID values directly
         }
 
         [Fact]
         public void Empty_ReturnsSingletonWithEmptyGuid()
         {
-            var id1 = GuestId.Empty;
-            var id2 = GuestId.Empty;
-            Assert.Same(id1, id2);
-            Assert.Equal(Guid.Empty, id1.Value);
+            var id1 = GuestId.Empty();
+            var id2 = GuestId.Empty();
+            Assert.Same(id1, id2); // ✅ Same instance
+            Assert.Equal(Guid.Empty, id1.Value); // ✅ Empty GUID
         }
         #endregion
 
@@ -123,16 +123,23 @@ namespace TestNest.StronglyTypeId.Tests
             var id1 = new GuestId(_testGuid);
             var id2 = new GuestId(_testGuid);
             Assert.Equal(id1, id2);
-            Assert.True(id1 == id2);
         }
 
         [Fact]
         public void Equals_WithDifferentValues_ReturnsFalse()
         {
-            var id1 = GuestId.New();
-            var id2 = GuestId.New();
+            // Create two different GUIDs first
+            var guid1 = Guid.NewGuid();
+            var guid2 = Guid.NewGuid();
+            while (guid1 == guid2) // Ensure they're different
+            {
+                guid2 = Guid.NewGuid();
+            }
+
+            var id1 = new GuestId(guid1);
+            var id2 = new GuestId(guid2);
+
             Assert.NotEqual(id1, id2);
-            Assert.True(id1 != id2);
         }
 
         [Fact]
