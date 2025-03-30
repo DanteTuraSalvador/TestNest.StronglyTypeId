@@ -2,7 +2,7 @@
 
 A .NET library for creating type-safe identifiers that prevent primitive obsession while maintaining explicit control over serialization.
 
-![.NET Version](https://img.shields.io/badge/.NET-%3E%3D6.0-blue)
+![.NET Version](https://img.shields.io/badge/.NET-%3E%3D8.0-blue)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
 ## 📦 Features
@@ -15,7 +15,4 @@ A .NET library for creating type-safe identifiers that prevent primitive obsessi
 
 ## 🚀 Getting Started
 
-Basic Usage
-Define your ID type:
 
-csharp
