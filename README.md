@@ -260,6 +260,7 @@ TestNest.StronglyTypeId/
 │   │
 │   └── TestConsole/                   # Optional test console
 │       └── Program.cs
+│   │   └── TestNest.StronglyTypeId.csproj
 │
 ├── tests/
 │   ├── TestNest.StronglyTypeId.Tests/
