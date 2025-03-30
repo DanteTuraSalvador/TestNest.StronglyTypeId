@@ -1,13 +1,10 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿// GuestId.cs
 using System.Diagnostics.CodeAnalysis;
-using System.Text.Json.Serialization;
 using TestNest.StronglyTypeId.Common;
 using TestNest.StronglyTypeId.Exceptions;
 
 namespace TestNest.StronglyTypeId.StronglyTypeIds;
 
-[ModelBinder(typeof(StronglyTypedIdModelBinder<GuestId>))]
-[JsonConverter(typeof(StronglyTypedIdJsonConverter<GuestId>))]
 public sealed record GuestId : StronglyTypedId<GuestId>
 {
     public GuestId(Guid value) : base(value)

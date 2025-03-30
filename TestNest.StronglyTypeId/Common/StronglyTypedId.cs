@@ -1,11 +1,10 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using System.Text.Json.Serialization;
+﻿// StronglyTypedId.cs
+using System;
+using System.Diagnostics.CodeAnalysis;
 using TestNest.StronglyTypeId.Exceptions;
 
 namespace TestNest.StronglyTypeId.Common;
 
-[ModelBinder(typeof(StronglyTypedIdModelBinder<>))]
-[JsonConverter(typeof(StronglyTypedIdJsonConverter<>))]
 public abstract record StronglyTypedId<T> : IComparable<T>, IEquatable<T>, IComparable
     where T : StronglyTypedId<T>
 {
