@@ -258,16 +258,15 @@ TestNest.StronglyTypeId/
 │   │   │    ├── GuestId.cs                                # Sample implementation
 │   │   └── TestNest.StronglyTypeId.csproj
 │   │
-│   └── TestConsole/                   # Optional test console
-│       └── Program.cs
+│   └── Console/                                           # Optional test console
+│   │   └── Program.cs
 │   │   └── TestNest.StronglyTypeId.csproj
 │
 ├── tests/
-│   ├── TestNest.StronglyTypeId.Tests/
-│   │   ├── GuestIdTests.cs            # Unit tests
-│   │   └── TestNest.StronglyTypeId.Tests.csproj
-│   │
-│   └── TestConsole/                    # Integration tests (optional)
+│   ├── TestNest.StronglyTypeId.Test/
+│   │   ├── GuestIdTests.cs                    # Unit tests
+│   │   ├── StronglyTypedIdTests.cs            # Unit tests
+│   │   └── TestNest.StronglyTypeId.Test.csproj
 │
 ├── README.md
 └── LICENSE
