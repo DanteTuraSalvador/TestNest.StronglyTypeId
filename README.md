@@ -355,6 +355,14 @@ TestNest.StronglyTypeId/
 
 ---
 
+## Project Management
+
+Track project progress, features, and user stories on our Azure DevOps board:
+
+- [Azure DevOps Board](https://dev.azure.com/tengtium-io/StronglyTypedId) - Epics, Features, and User Stories
+
+---
+
 ## Related Projects
 
 - [TestNest.ValueObjects](https://github.com/DanteTuraSalvador/TestNest.ValueObjects) - Value Object pattern implementation (Email, PhoneNumber, Address, Money, Currency, Price)
