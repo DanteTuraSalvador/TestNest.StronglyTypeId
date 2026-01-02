@@ -1,32 +1,32 @@
-﻿using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.CodeAnalysis;
 using TestNest.StronglyTypeId.Common;
 using TestNest.StronglyTypeId.Exceptions;
 
 namespace TestNest.StronglyTypeId.StronglyTypeIds
 {
-    public sealed record GuestId : StronglyTypedId<GuestId>
+    public sealed record CustomerId : StronglyTypedId<CustomerId>
     {
 
-        private static readonly Lazy<GuestId> _lazyEmpty = new(() => new GuestId(Guid.Empty, true), LazyThreadSafetyMode.ExecutionAndPublication);
-        public static new GuestId Empty() => _lazyEmpty.Value;
+        private static readonly Lazy<CustomerId> _lazyEmpty = new(() => new CustomerId(Guid.Empty, true), LazyThreadSafetyMode.ExecutionAndPublication);
+        public static new CustomerId Empty() => _lazyEmpty.Value;
 
 
-        public GuestId(Guid value) : base(value)
+        public CustomerId(Guid value) : base(value)
         {
             if (value == Guid.Empty)
-                throw StronglyTypedIdException.InvalidGuidCreation(typeof(GuestId));
+                throw StronglyTypedIdException.InvalidGuidCreation(typeof(CustomerId));
         }
 
-        public GuestId() : base() { }
+        public CustomerId() : base() { }
 
         // Private constructor for creating Empty instance
-        private GuestId(Guid value, bool _) : base(value, true) { }
+        private CustomerId(Guid value, bool _) : base(value, true) { }
 
-        public static GuestId Create(Guid value) => new(value);
+        public static CustomerId Create(Guid value) => new(value);
 
-        public static new GuestId New() => new(Guid.NewGuid());
+        public static new CustomerId New() => new(Guid.NewGuid());
 
-        public static GuestId Parse(string input)
+        public static CustomerId Parse(string input)
         {
             if (!Guid.TryParse(input, out var guid) || guid == Guid.Empty)
                 throw StronglyTypedIdException.InvalidFormat(input);
@@ -34,7 +34,7 @@ namespace TestNest.StronglyTypeId.StronglyTypeIds
             return new(guid);
         }
 
-        public static explicit operator GuestId(string? input)
+        public static explicit operator CustomerId(string? input)
         {
             if (input is null)
                 throw new ArgumentNullException(nameof(input));
@@ -43,13 +43,13 @@ namespace TestNest.StronglyTypeId.StronglyTypeIds
 
         public static new bool TryParse(
             [NotNullWhen(true)] string? input,
-            [NotNullWhen(true)] out GuestId? result)
+            [NotNullWhen(true)] out CustomerId? result)
         {
             result = null;
             if (string.IsNullOrEmpty(input) || !Guid.TryParse(input, out var guid) || guid == Guid.Empty)
                 return false;
 
-            result = new GuestId(guid);
+            result = new CustomerId(guid);
             return true;
         }
 
