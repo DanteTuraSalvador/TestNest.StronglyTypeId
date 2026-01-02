@@ -69,6 +69,7 @@ public void AssignBookingToGuest(BookingId bookingId, GuestId guestId)
 | `CustomerId` | Identifier for customer entities |
 | `OrderId` | Identifier for order entities |
 | `ProductId` | Identifier for product entities |
+| `VisitId` | Identifier for visit entities |
 
 ### Usage Examples
 
@@ -318,7 +319,8 @@ TestNest.StronglyTypeId/
 │   │   ├── GuestId.cs                  # Guest identifier
 │   │   ├── CustomerId.cs               # Customer identifier
 │   │   ├── OrderId.cs                  # Order identifier
-│   │   └── ProductId.cs                # Product identifier
+│   │   ├── ProductId.cs                # Product identifier
+│   │   └── VisitId.cs                  # Visit identifier
 │   ├── ValueObjects/
 │   │   ├── Email.cs                    # Email value object
 │   │   ├── PhoneNumber.cs              # Phone number value object
@@ -365,6 +367,7 @@ Track project progress, features, and user stories on our Azure DevOps board:
 
 ## Related Projects
 
+- [TestNest.SmartEnums](https://github.com/DanteTuraSalvador/TestNest.SmartEnums) - SmartEnum pattern implementation with state machine (CheckInOut, Visit entity)
 - [TestNest.ValueObjects](https://github.com/DanteTuraSalvador/TestNest.ValueObjects) - Value Object pattern implementation (Email, PhoneNumber, Address, Money, Currency, Price)
 
 ---
