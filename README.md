@@ -1,15 +1,14 @@
 # StronglyTypedId Library
 
-A comprehensive .NET 8.0 library implementing the **Strongly Typed ID** pattern and **Value Object** pattern from Domain-Driven Design (DDD). Provides type-safe identifiers and immutable value objects with validation.
+A comprehensive .NET 8.0 library implementing the **Strongly Typed ID** pattern from Domain-Driven Design (DDD). Provides type-safe identifiers that prevent primitive obsession and enforce domain constraints.
 
 ## Features
 
 - **Type-safe IDs** - Prevents mixing different ID types (GuestId, CustomerId, OrderId, ProductId)
-- **Value Objects** - Immutable objects with value-based equality (Email, PhoneNumber, Address)
-- **Domain Entities** - Ready-to-use entities demonstrating the patterns (Customer, Guest, Order)
 - **Validation** - Built-in validation with descriptive error messages
 - **Zero dependencies** - Self-contained library with no external dependencies
 - **Thread-safe** - Singleton `Empty` pattern with lazy initialization
+- **Domain Entities** - Example entities combining Strongly Typed IDs with Value Objects
 - **118 unit tests** - Comprehensive test coverage
 
 ---
@@ -21,10 +20,6 @@ A comprehensive .NET 8.0 library implementing the **Strongly Typed ID** pattern 
   - [Available IDs](#available-ids)
   - [Usage Examples](#usage-examples)
   - [Creating Custom IDs](#creating-custom-ids)
-- [Value Objects](#value-objects)
-  - [Email](#email)
-  - [PhoneNumber](#phonenumber)
-  - [Address](#address)
 - [Domain Entities](#domain-entities)
   - [Customer](#customer)
   - [Guest](#guest)
@@ -185,122 +180,14 @@ public sealed record BookingId : StronglyTypedId<BookingId>
 
 ---
 
-## Value Objects
-
-Value objects are immutable objects that are compared by their values rather than identity. They include validation and factory methods.
-
-### Email
-
-Represents a validated email address with parsed components.
-
-```csharp
-// Create (throws on invalid)
-var email = Email.Create("john.doe@example.com");
-
-// TryCreate (safe)
-if (Email.TryCreate("john.doe@example.com", out var result))
-{
-    Console.WriteLine($"Valid email: {result}");
-}
-
-// Parse (returns Empty for null/whitespace)
-var email = Email.Parse("john.doe@example.com");
-
-// Access properties
-Console.WriteLine(email.Address);    // "john.doe@example.com"
-Console.WriteLine(email.LocalPart);  // "john.doe"
-Console.WriteLine(email.Domain);     // "example.com"
-
-// Check if empty
-if (email.IsEmpty())
-{
-    Console.WriteLine("No email provided");
-}
-
-// Empty singleton
-var empty = Email.Empty;
-```
-
-### PhoneNumber
-
-Represents a validated phone number with country code support.
-
-```csharp
-// Create with country code and number
-var phone = PhoneNumber.Create("+1", "5551234567");
-
-// Create from full number string
-var phone = PhoneNumber.Create("+15551234567");
-
-// TryCreate (safe)
-if (PhoneNumber.TryCreate("+1", "5551234567", out var result))
-{
-    Console.WriteLine($"Valid phone: {result}");
-}
-
-// Access properties
-Console.WriteLine(phone.CountryCode);  // "+1"
-Console.WriteLine(phone.Number);       // "5551234567"
-Console.WriteLine(phone.FullNumber);   // "+15551234567"
-
-// Formatted output
-Console.WriteLine(phone.ToFormattedString());  // "+1 (555) 123-4567"
-
-// Get supported country codes
-var codes = PhoneNumber.GetValidCountryCodes();
-// "+1", "+44", "+63", "+81", "+86", "+91", "+49", "+33", "+39", "+34"
-```
-
-### Address
-
-Represents a multi-field address with immutable update methods.
-
-```csharp
-// Create with all fields
-var address = Address.Create(
-    street: "123 Main Street",
-    city: "New York",
-    state: "NY",
-    postalCode: "10001",
-    country: "USA"
-);
-
-// Create with required fields only
-var address = Address.Create("123 Main Street", "New York", "USA");
-
-// TryCreate (safe)
-if (Address.TryCreate("123 Main St", "NYC", "NY", "10001", "USA", out var result))
-{
-    Console.WriteLine($"Valid address: {result}");
-}
-
-// Immutable updates (returns new instance)
-var updated = address
-    .WithStreet("456 Oak Avenue")
-    .WithCity("Los Angeles")
-    .WithState("CA")
-    .WithPostalCode("90001");
-
-// Formatting
-Console.WriteLine(address.ToSingleLineString());
-// "123 Main Street, New York, NY, 10001, USA"
-
-Console.WriteLine(address.ToMultiLineString());
-// 123 Main Street
-// New York, NY 10001
-// USA
-```
-
----
-
 ## Domain Entities
 
-Domain entities demonstrate how to use strongly typed IDs and value objects together.
+This library includes domain entities that demonstrate how to combine **Strongly Typed IDs** with **Value Objects** (Email, PhoneNumber, Address). For detailed documentation on Value Objects, see the [TestNest.ValueObjects](https://github.com/DanteTuraSalvador/TestNest.ValueObjects) project.
 
 ### Customer
 
 ```csharp
-// Create a customer
+// Create a customer with strongly typed ID and value objects
 var customer = Customer.Create(
     name: "John Doe",
     email: Email.Create("john@example.com"),
@@ -309,7 +196,7 @@ var customer = Customer.Create(
 );
 
 // Access properties
-Console.WriteLine(customer.Id);       // CustomerId
+Console.WriteLine(customer.Id);       // CustomerId (strongly typed)
 Console.WriteLine(customer.Name);     // "John Doe"
 Console.WriteLine(customer.Email);    // Email value object
 Console.WriteLine(customer.CreatedAt);
@@ -329,7 +216,7 @@ bool isComplete = customer.HasCompleteProfile();   // Contact AND Address
 ### Guest
 
 ```csharp
-// Create a guest
+// Create a guest with strongly typed ID
 var guest = Guest.Create(
     firstName: "John",
     lastName: "Smith",
@@ -339,7 +226,7 @@ var guest = Guest.Create(
 );
 
 // Access properties
-Console.WriteLine(guest.Id);        // GuestId
+Console.WriteLine(guest.Id);        // GuestId (strongly typed)
 Console.WriteLine(guest.FullName);  // "John Smith"
 Console.WriteLine(guest.FirstName); // "John"
 Console.WriteLine(guest.LastName);  // "Smith"
@@ -355,18 +242,20 @@ Console.WriteLine(guest.FullName);  // "Jonathan Smithson"
 ### Order
 
 ```csharp
-// Create an order
+// Create an order with multiple strongly typed IDs
 var customerId = CustomerId.New();
 var shippingAddress = Address.Create("123 Ship St", "Portland", "OR", "97201", "USA");
 var billingAddress = Address.Create("456 Bill Ave", "Seattle", "WA", "98101", "USA");
 
 var order = Order.Create(customerId, shippingAddress, billingAddress);
 
-// Add items
+// Add items using ProductId
 order
     .AddItem(ProductId.New(), "Widget", quantity: 2, unitPrice: 29.99m)
     .AddItem(ProductId.New(), "Gadget", quantity: 1, unitPrice: 49.99m);
 
+Console.WriteLine(order.Id);           // OrderId (strongly typed)
+Console.WriteLine(order.CustomerId);   // CustomerId (strongly typed)
 Console.WriteLine(order.TotalAmount);  // 109.97
 Console.WriteLine(order.Items.Count);  // 2
 
@@ -377,16 +266,6 @@ order.Deliver();   // Shipped -> Delivered
 
 // Or cancel (only before shipping)
 order.Cancel();    // Pending/Confirmed -> Cancelled
-
-// Remove items (only when Pending)
-order.RemoveItem(productId);
-
-// Update addresses (only before shipping)
-order.UpdateShippingAddress(newAddress);
-order.UpdateBillingAddress(newAddress);
-
-// Billing address defaults to shipping if not set
-var effectiveBilling = order.EffectiveBillingAddress;
 ```
 
 #### Order Status Workflow
@@ -418,50 +297,7 @@ catch (StronglyTypedIdException ex)
 }
 ```
 
-### EmailException
-
-```csharp
-try
-{
-    var email = Email.Create("invalid-email");
-}
-catch (EmailException ex)
-{
-    Console.WriteLine(ex.Code);  // ErrorCode.InvalidFormat
-}
-```
-
-Error codes: `EmptyEmail`, `InvalidFormat`, `InvalidLocalPart`, `InvalidDomain`
-
-### PhoneNumberException
-
-```csharp
-try
-{
-    var phone = PhoneNumber.Create("+999", "12345");
-}
-catch (PhoneNumberException ex)
-{
-    Console.WriteLine(ex.Code);  // ErrorCode.InvalidCountryCode
-}
-```
-
-Error codes: `EmptyPhoneNumber`, `InvalidFormat`, `InvalidCountryCode`, `InvalidNumber`
-
-### AddressException
-
-```csharp
-try
-{
-    var address = Address.Create("", "City", "Country");
-}
-catch (AddressException ex)
-{
-    Console.WriteLine(ex.Code);  // ErrorCode.EmptyStreet
-}
-```
-
-Error codes: `EmptyStreet`, `EmptyCity`, `EmptyCountry`, `InvalidPostalCode`, `InvalidAddress`
+Error codes: `NullInstanceCreation`, `InvalidGuidCreation`, `InvalidFormat`, `NullId`
 
 ---
 
@@ -510,12 +346,18 @@ TestNest.StronglyTypeId/
 
 ## Design Principles
 
-- **Immutability** - All IDs and value objects are immutable once created
-- **Value Semantics** - Objects are compared by their values, not references
-- **Self-Validation** - Objects validate themselves during construction
+- **Immutability** - All IDs are immutable once created
+- **Value Semantics** - IDs are compared by their values, not references
+- **Self-Validation** - IDs validate themselves during construction
 - **Fail Fast** - Invalid data throws immediately with descriptive messages
 - **Factory Methods** - Multiple creation patterns (Create, TryCreate, Parse, TryParse)
-- **Singleton Empty** - Thread-safe lazy singleton for empty/default instances
+- **Singleton Empty** - Thread-safe lazy singleton for empty instances
+
+---
+
+## Related Projects
+
+- [TestNest.ValueObjects](https://github.com/DanteTuraSalvador/TestNest.ValueObjects) - Value Object pattern implementation (Email, PhoneNumber, Address, Money, Currency, Price)
 
 ---
 
